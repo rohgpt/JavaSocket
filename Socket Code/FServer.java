@@ -62,7 +62,6 @@ public class FServer {
             int prevResult=result;
             result = this.readChunk();
 
-            System.out.println("Byte= " + result);
             String tmp = "RDT " + this.curr_seq + " ";
             byte[] snd1=tmp.getBytes();
 

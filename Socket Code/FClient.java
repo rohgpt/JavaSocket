@@ -3,7 +3,7 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 
-public class FClient2 {
+public class FClient {
 
     private static final double LOSS_RATE = 0.3;
     private static final int AVERAGE_DELAY = 100;
