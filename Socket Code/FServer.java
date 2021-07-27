@@ -4,7 +4,6 @@ import java.rmi.server.SocketSecurityException;
 import java.io.*;
 import java.util.*;
 
-
 public class FServer {
 
     private DatagramSocket sock_et;
@@ -20,7 +19,6 @@ public class FServer {
 
     private int prev_seq_no = -1;
     private int curr_seq = 0;
-  
 
     private FileInputStream clientFile;
     private byte[] currentChunk;
@@ -29,7 +27,7 @@ public class FServer {
     private int result = 512;
 
     public FServer(int serverPort) throws SocketException {
-        
+
         this.sock_et = new DatagramSocket(serverPort);
         // this.sock_et.setSoTimeout(30);
         this.response = new byte[100];
@@ -54,74 +52,86 @@ public class FServer {
     public int sendReply() throws IOException {
 
         if (curr_seq <= prev_seq_no) {
-            if (result == -1 && curr_seq < prev_seq_no) 
-                    this.End = true; 
+            if (result == -1 && curr_seq < prev_seq_no) {
+                this.End = true;
+                this.sock_et.setSoTimeout(0);
+                System.out.println("File Ended ");
+                this.prev_seq_no = -1;
+                this.curr_seq = 0;
+                this.result = -2;
+            }
         } else {
             this.currentChunk = new byte[512];
-            this.currentChunk = this.nextChunk.clone();
-            int prevResult=result;
-            result = this.readChunk();
 
+            this.currentChunk = this.nextChunk.clone();
+
+            int prevResult = result;
+            result = this.readChunk();
+         
             String tmp = "RDT " + this.curr_seq + " ";
-            byte[] snd1=tmp.getBytes();
+            byte[] snd1 = tmp.getBytes();
 
             // String str_data = new String(this.nextChunk);
             // System.out.println(str_data);
-            
+
             if (result == -1) {
 
-                byte[] snd3= " END \r\n".getBytes();
-                snd2 = Arrays.copyOfRange(this.currentChunk,0,prevResult);
-                toSnd=new byte[snd1.length+snd2.length+snd3.length];
-                
-                int k=0;
-                for(int i=0;i<snd1.length;i++){
-                    toSnd[k++]=snd1[i];
+                byte[] snd3 = " END \r\n".getBytes();
+                snd2 = Arrays.copyOfRange(this.currentChunk, 0, prevResult);
+                toSnd = new byte[snd1.length + snd2.length + snd3.length];
+
+                int k = 0;
+                for (int i = 0; i < snd1.length; i++) {
+                    toSnd[k++] = snd1[i];
                 }
-                for(int i=0;i<snd2.length;i++){
-                    toSnd[k++]=snd2[i];
+                for (int i = 0; i < snd2.length; i++) {
+                    toSnd[k++] = snd2[i];
                 }
-                for(int i=0;i<snd3.length;i++){
-                    toSnd[k++]=snd3[i];
+                for (int i = 0; i < snd3.length; i++) {
+                    toSnd[k++] = snd3[i];
                 }
 
                 this.clientFile.close();
             } else {
-                byte[] snd3= " \r\n".getBytes();
-                snd2 = Arrays.copyOfRange(this.currentChunk,0,prevResult);
                 
-                toSnd=new byte[snd1.length+snd2.length+snd3.length];
-                
-                int k=0;
-                for(int i=0;i<snd1.length;i++){
-                    toSnd[k++]=snd1[i];
+                byte[] snd3 = " \r\n".getBytes();
+
+                snd2 = Arrays.copyOfRange(this.currentChunk, 0, prevResult);
+
+                toSnd = new byte[snd1.length + snd2.length + snd3.length];
+               
+                int k = 0;
+                for (int i = 0; i < snd1.length; i++) {
+                    toSnd[k++] = snd1[i];
                 }
-                for(int i=0;i<snd2.length;i++){
-                    toSnd[k++]=snd2[i];
+                for (int i = 0; i < snd2.length; i++) {
+                    toSnd[k++] = snd2[i];
                 }
-                for(int i=0;i<snd3.length;i++){
-                    toSnd[k++]=snd3[i];
+                for (int i = 0; i < snd3.length; i++) {
+                    toSnd[k++] = snd3[i];
                 }
 
             }
+
             reply = toSnd;
             this.prev_seq_no = this.curr_seq;
         }
-        this.send_packet = new DatagramPacket(reply, reply.length, this.rec_ip, this.rec_port);
+        if (this.result != -2) {
+            this.send_packet = new DatagramPacket(reply, reply.length, this.rec_ip, this.rec_port);
+            // System.out.println("Byte[0]= " + reply[6]);
+            // System.out.println("Byte[last]= " + reply[497]);
+            // if(this.curr_seq>0)
+            // System.out.println("Byte[0]= " + reply[6+(int)Math.log10(this.curr_seq)]);
+            // else System.out.println("Byte[0]= " + reply[6]);
+            // if(result==-1){
+            // System.out.println("Byte[last]= " + reply[reply.length - 8]);
+            // }
+            // else
+            // System.out.println("Byte[last]= " + reply[reply.length - 4]);
+            // System.out.println("total length sent: " + reply.length);
+            this.sock_et.send(send_packet);
+        }
 
-        // System.out.println("Byte[0]= " + reply[6]);
-        // System.out.println("Byte[last]= " + reply[497]);
-        // if(this.curr_seq>0)
-        // System.out.println("Byte[0]= " + reply[6+(int)Math.log10(this.curr_seq)]);
-        // else  System.out.println("Byte[0]= " + reply[6]);
-        // if(result==-1){
-        //     System.out.println("Byte[last]= " + reply[reply.length - 8]);
-        // }
-        // else
-        // System.out.println("Byte[last]= " + reply[reply.length - 4]);
-        // System.out.println("total length sent: " + reply.length);
-        this.sock_et.send(send_packet);
-        
         return result;
     }
 
@@ -133,17 +143,20 @@ public class FServer {
         this.rec_ip = rec_packet.getAddress();
         this.rec_port = rec_packet.getPort();
 
-
         this.rec_data = new String(rec_packet.getData());
 
         this.rec_data = rec_data.trim();
-
+        // String rep;
+        // System.out.println();
         if (prev_seq_no == -1) {
             System.out.println("Client IP Address = " + rec_ip);
             System.out.println("Client port = " + rec_port);
+
             this.clientFile = new FileInputStream(rec_data);
             this.sock_et.setSoTimeout(160);
-            this.readChunk();
+            this.result=this.readChunk();
+            // rep=new String(this.nextChunk);
+            // System.out.println(" First seq "+rep);
             // System.out.println("Byte= " + );
             System.out.println("Filename " + rec_data);
 
@@ -152,12 +165,12 @@ public class FServer {
 
             this.curr_seq = this.getSequenceNo(rec_data);
 
-            if(this.prev_seq_no!=this.curr_seq){
+            if (this.prev_seq_no != this.curr_seq) {
                 System.out.println("Client IP Address = " + rec_ip);
                 System.out.println("Client port = " + rec_port);
-        
-            System.out.println(rec_data+"\r\n");
-        }
+
+                System.out.println(rec_data + "\r\n");
+            }
 
         }
 
@@ -171,7 +184,7 @@ public class FServer {
             FServer fs = new FServer(serverPort);
             System.out.println("Server is up");
             boolean end = fs.End;
-            while (true && !fs.End) {
+            while (true) {
                 try {
                     fs.getRespose();
 
@@ -187,16 +200,17 @@ public class FServer {
                 try {
                     result = fs.sendReply();
                 } catch (Exception e) {
-
+                    System.out.println(e.getMessage());
                 }
 
             }
-            try {
-                fs.clientFile.close();
-            } catch (IOException ex) {
-                System.out.println("Failed to close file,reason may be file pointing to null object");
-                System.out.println(ex.getMessage());
-            }
+            // try {
+            // fs.clientFile.close();
+            // } catch (IOException ex) {
+            // System.out.println("Failed to close file,reason may be file pointing to null
+            // object");
+            // System.out.println(ex.getMessage());
+            // }
 
         } catch (SocketException ex) {
             System.out.println("Socket Exception Occur");
